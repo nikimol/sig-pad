@@ -26,7 +26,7 @@ A comprehensive signature pad integration example that allows users to draw digi
 
 ### Step 1: Download Files
 
-Clone or download this repository and copy these files to your web directory:
+Clone or download this repository and copy these files to your web directory. The example.html file includes all CSS and JS, so it does not require links to either - they are included if you wish to separate them out, as they are in the index.html file:
 
 ```
 your-website/
