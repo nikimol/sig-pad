@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Form with Signature Pad Integration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+    
+    <!-- External CSS Dependencies -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans&display=swap" rel="stylesheet">
+    
+    <style>
+        /* =============================================================================
+           CUSTOM STYLES FOR SIGNATURE FORM
+           ============================================================================= */
+        
+        /* Base styling */
+        body {
+            font-family: 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        
+        /* Main form container styling */
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* Signature section container - visually separates signature area */
+        .signature-section {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background-color: #f8f9fa;
+        }
+        
+        /* Signature pad canvas container */
+        .signature-pad {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            margin: 15px 0;
+        }
+        
+        /* Canvas element styling - defines drawing area size */
+        .signature-pad canvas {
+            border-radius: 6px;
+            display: block;
+            width: 100%;
+            height: 200px; /* Adjust this to change signature area height */
+        }
+        
+        /* Control buttons layout */
+        .signature-controls {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .signature-controls .btn-group {
+            display: flex;
+            gap: 5px;
+        }
+        
+        /* Button styling overrides */
+        .btn {
+            border-radius: 4px;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        
+        /* Button color definitions */
+        .btn-danger { background-color: #dc3545; border-color: #dc3545; }
+        .btn-warning { background-color: #ffc107; border-color: #ffc107; color: #212529; }
+        .btn-info { background-color: #17a2b8; border-color: #17a2b8; }
+        .btn-success { background-color: #28a745; border-color: #28a745; }
+        
+        /* Signature preview area (currently unused but available for future features) */
+        .signature-preview {
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .signature-preview img {
+            max-width: 100%;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        
+        /* Radio button selector for signature type */
+        .signature-type-selector {
+            margin-bottom: 20px;
+        }
+        
+        /* Style active radio button labels */
+        .form-check-input:checked ~ .form-check-label {
+            color: #007bff;
+            font-weight: 600;
+        }
+        
+        /* Initial visibility states for signature input methods */
+        #textSignatureGroup {
+            display: none; /* Hidden by default - shown when "Type Name" is selected */
+        }
+        
+        #signaturePadGroup {
+            display: block; /* Visible by default - "Draw Signature" is selected */
+        }
+        
+        /* Status message styling */
+        .signature-status {
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        /* Status color classes */
+        .text-success { color: #28a745 !important; }
+        .text-warning { color: #ffc107 !important; }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .signature-controls {
+                flex-direction: column;
+            }
+            
+            .signature-controls .btn-group {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- =============================================================================
+         MAIN FORM STRUCTURE
+         ============================================================================= -->
+    <div class="form-container">
+        <h2>Agreement Form</h2>
+        <form id="agreementForm">
+            
+            <!-- =============================================================================
+                 STANDARD FORM FIELDS
+                 These would be your existing form fields
+                 ============================================================================= -->
+            <div class="form-group">
+                <label for="fullName">Full Name *</label>
+                <input type="text" class="form-control" id="fullName" name="fullName" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" class="form-control" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="company">Company</label>
+                <input type="text" class="form-control" id="company" name="company">
+            </div>
+            
+            <!-- =============================================================================
+                 SIGNATURE INTEGRATION SECTION
+                 This replaces your existing text-only signature input
+                 ============================================================================= -->
+            <div class="signature-section">
+                <h4>Signature</h4>
+                <p class="text-muted">Please provide your signature to complete this agreement.</p>
+                
+                <!-- Signature Type Selector - allows users to choose input method -->
+                <div class="signature-type-selector">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="signatureType" id="useDrawn" value="drawn" checked>
+                        <label class="form-check-label" for="useDrawn">
+                            Draw Signature
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="signatureType" id="useTyped" value="typed">
+                        <label class="form-check-label" for="useTyped">
+                            Type Name
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Drawn Signature Section -->
+                <div id="signaturePadGroup">
+                    <!-- Canvas container for drawing signatures -->
+                    <div class="signature-pad">
+                        <canvas id="signatureCanvas"></canvas>
+                    </div>
+                    
+                    <!-- Control buttons for signature pad functionality -->
+                    <div class="signature-controls">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-danger btn-sm" id="clearBtn">Clear</button>
+                            <button type="button" class="btn btn-warning btn-sm" id="undoBtn">Undo</button>
+                            <button type="button" class="btn btn-info btn-sm" id="changeColorBtn">Change Color</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Status indicator for signature state -->
+                    <div class="signature-status">
+                        <span id="signatureStatus" class="text-warning">Please sign above</span>
+                    </div>
+                </div>
+                
+                <!-- Typed Signature Section - fallback/alternative input method -->
+                <div id="textSignatureGroup">
+                    <div class="form-group">
+                        <label for="textSignature">Type your full name as your signature</label>
+                        <input type="text" class="form-control" id="textSignature" name="textSignature" 
+                               placeholder="Enter your full name here">
+                    </div>
+                </div>
+                
+                <!-- Hidden fields to store signature data for form submission -->
+                <input type="hidden" id="signatureData" name="signatureData">
+                <input type="hidden" id="signatureMethod" name="signatureMethod" value="drawn">
+            </div>
+            
+            <!-- =============================================================================
+                 REMAINING FORM ELEMENTS
+                 Continue with your existing form structure
+                 ============================================================================= -->
+            
+            <!-- Agreement checkbox -->
+            <div class="form-group form-check">
+                <input type="checkbox" class="form-check-input" id="agreeTerms" name="agreeTerms" required>
+                <label class="form-check-label" for="agreeTerms">
+                    I agree to the terms and conditions *
+                </label>
+            </div>
+            
+            <!-- Submit button -->
+            <button type="submit" class="btn btn-primary btn-lg">Submit Agreement</button>
+        </form>
+    </div>
+
+    <!-- =============================================================================
+         JAVASCRIPT DEPENDENCIES AND INITIALIZATION
+         ============================================================================= -->
+
+    <!-- Signature Pad Library with CDN fallback system -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js" 
+            onerror="loadSignaturePadFallback()"></script>
+    
+    <script>
+        /* =============================================================================
+           SIGNATURE PAD INTEGRATION JAVASCRIPT
+           
+           This script handles:
+           1. Loading the signature pad library with fallbacks
+           2. Initializing the drawing canvas
+           3. Managing user interactions (draw, clear, undo, etc.)
+           4. Switching between drawing and typing modes
+           5. Form validation and submission
+           ============================================================================= */
+
+        // =============================================================================
+        // GLOBAL VARIABLES
+        // =============================================================================
+        
+        // Canvas and signature pad instances - declared globally for cross-function access
+        let canvas, signaturePad;
+
+        // =============================================================================
+        // LIBRARY LOADING AND FALLBACK SYSTEM
+        // =============================================================================
+        
+        /**
+         * Fallback function if primary CDN fails
+         * Attempts to load from alternative CDN
+         */
+        function loadSignaturePadFallback() {
+            console.log('Primary CDN failed, trying fallback...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/signature_pad@4.1.7/dist/signature_pad.umd.min.js';
+            script.onerror = function() {
+                alert('Unable to load signature pad library. Please refresh the page or check your internet connection.');
+            };
+            document.head.appendChild(script);
+        }
+
+        // =============================================================================
+        // SIGNATURE PAD INITIALIZATION
+        // =============================================================================
+        
+        /**
+         * Main initialization function
+         * Waits for SignaturePad library to load, then sets up the signature functionality
+         */
+        function initializeSignaturePad() {
+            // Check if SignaturePad library is loaded
+            if (typeof SignaturePad === 'undefined') {
+                console.log('SignaturePad not loaded yet, retrying...');
+                setTimeout(initializeSignaturePad, 100);
+                return;
+            }
+
+            // Get canvas element from DOM
+            canvas = document.getElementById('signatureCanvas');
+            
+            if (!canvas) {
+                console.error('Canvas element not found');
+                return;
+            }
+
+            try {
+                // Initialize SignaturePad with configuration
+                window.signaturePad = new SignaturePad(canvas, {
+                    backgroundColor: 'rgb(255, 255, 255)', // White background (important for JPG export)
+                    penColor: 'rgb(0, 0, 0)',             // Black pen by default
+                    minWidth: 1,                           // Minimum stroke width
+                    maxWidth: 3                            // Maximum stroke width
+                });
+                
+                console.log('Signature pad initialized successfully');
+                setupEventListeners();
+            } catch (error) {
+                console.error('Error initializing signature pad:', error);
+                alert('Error loading signature functionality. Please refresh the page.');
+            }
+        }
+
+        // =============================================================================
+        // CANVAS MANAGEMENT
+        // =============================================================================
+        
+        /**
+         * Handles canvas resizing for different screen sizes and device pixel ratios
+         * Ensures crisp rendering on high-DPI displays
+         */
+        function resizeCanvas() {
+            try {
+                // Safety check - ensure canvas and signature pad exist
+                if (!canvas || !window.signaturePad) {
+                    return;
+                }
+                
+                // Calculate device pixel ratio for crisp rendering
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                
+                // Resize canvas to match display size * pixel ratio
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                
+                // Scale the drawing context to match
+                canvas.getContext("2d").scale(ratio, ratio);
+                
+                // Clear the canvas (resizing automatically clears it anyway)
+                window.signaturePad.clear();
+            } catch (error) {
+                console.error('Error resizing canvas:', error);
+            }
+        }
+
+        // =============================================================================
+        // EVENT LISTENER SETUP
+        // =============================================================================
+        
+        /**
+         * Sets up all event listeners for signature functionality
+         * Called after SignaturePad is successfully initialized
+         */
+        function setupEventListeners() {
+            // =============================================================================
+            // DOM ELEMENT REFERENCES
+            // =============================================================================
+            
+            // Get references to all interactive elements
+            const clearBtn = document.getElementById('clearBtn');
+            const undoBtn = document.getElementById('undoBtn');
+            const changeColorBtn = document.getElementById('changeColorBtn');
+            const signatureStatus = document.getElementById('signatureStatus');
+            const signatureData = document.getElementById('signatureData');
+            const signatureMethod = document.getElementById('signatureMethod');
+            const textSignature = document.getElementById('textSignature');
+            const form = document.getElementById('agreementForm');
+
+            // =============================================================================
+            // CANVAS RESIZE HANDLING
+            // =============================================================================
+            
+            // Set up responsive canvas resizing
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas(); // Initial resize
+
+            // =============================================================================
+            // SIGNATURE PAD CONTROL BUTTONS
+            // =============================================================================
+            
+            /**
+             * Clear Button - removes all strokes from canvas
+             */
+            clearBtn.addEventListener('click', () => {
+                window.signaturePad.clear();
+                updateSignatureStatus();
+            });
+
+            /**
+             * Undo Button - removes the last stroke
+             */
+            undoBtn.addEventListener('click', () => {
+                try {
+                    const data = window.signaturePad.toData();
+                    if (data && data.length > 0) {
+                        data.pop(); // Remove last stroke
+                        window.signaturePad.fromData(data); // Redraw remaining strokes
+                        updateSignatureStatus();
+                    }
+                } catch (error) {
+                    console.error('Error undoing signature:', error);
+                }
+            });
+
+            /**
+             * Change Color Button - randomly changes pen color
+             */
+            changeColorBtn.addEventListener('click', () => {
+                try {
+                    const colors = ['rgb(0, 0, 0)', 'rgb(0, 0, 255)', 'rgb(255, 0, 0)', 'rgb(0, 128, 0)', 'rgb(128, 0, 128)'];
+                    const currentColor = window.signaturePad.penColor;
+                    let newColor;
+                    
+                    // Pick a different color than the current one
+                    do {
+                        newColor = colors[Math.floor(Math.random() * colors.length)];
+                    } while (newColor === currentColor);
+                    
+                    window.signaturePad.penColor = newColor;
+                } catch (error) {
+                    console.error('Error changing color:', error);
+                }
+            });
+
+            // =============================================================================
+            // SIGNATURE STATUS MANAGEMENT
+            // =============================================================================
+            
+            /**
+             * Updates the signature status display and hidden form field
+             * Shows whether signature is captured and stores signature data
+             */
+            function updateSignatureStatus() {
+                try {
+                    if (window.signaturePad.isEmpty()) {
+                        // No signature present
+                        signatureStatus.textContent = 'Please sign above';
+                        signatureStatus.className = 'text-warning';
+                        signatureData.value = '';
+                    } else {
+                        // Signature captured
+                        signatureStatus.textContent = 'Signature captured ✓';
+                        signatureStatus.className = 'text-success';
+                        // Convert signature to base64 data URL for storage
+                        signatureData.value = window.signaturePad.toDataURL();
+                    }
+                } catch (error) {
+                    console.error('Error updating signature status:', error);
+                }
+            }
+
+            // =============================================================================
+            // SIGNATURE CHANGE DETECTION
+            // =============================================================================
+            
+            // Listen for signature drawing events to update status in real-time
+            try {
+                window.signaturePad.addEventListener('beginStroke', updateSignatureStatus);
+                window.signaturePad.addEventListener('endStroke', updateSignatureStatus);
+            } catch (error) {
+                // Fallback: if event listeners aren't available, check periodically
+                console.log('Using fallback signature detection');
+                setInterval(() => {
+                    updateSignatureStatus();
+                }, 1000);
+            }
+
+            // =============================================================================
+            // SIGNATURE TYPE SWITCHING (DRAW vs TYPE)
+            // =============================================================================
+            
+            /**
+             * Handles switching between drawn and typed signature modes
+             */
+            document.querySelectorAll('input[name="signatureType"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const signaturePadGroup = document.getElementById('signaturePadGroup');
+                    const textSignatureGroup = document.getElementById('textSignatureGroup');
+                    
+                    if (e.target.value === 'drawn') {
+                        // Switch to drawing mode
+                        signaturePadGroup.style.display = 'block';
+                        textSignatureGroup.style.display = 'none';
+                        signatureMethod.value = 'drawn';
+                        
+                        // Clear typed signature when switching
+                        textSignature.value = '';
+                        updateSignatureStatus();
+                    } else {
+                        // Switch to typing mode
+                        signaturePadGroup.style.display = 'none';
+                        textSignatureGroup.style.display = 'block';
+                        signatureMethod.value = 'typed';
+                        
+                        // Clear drawn signature when switching
+                        if (window.signaturePad) {
+                            window.signaturePad.clear();
+                        }
+                        signatureData.value = '';
+                    }
+                });
+            });
+
+            // =============================================================================
+            // TYPED SIGNATURE HANDLING
+            // =============================================================================
+            
+            /**
+             * Updates signature data when user types their name
+             */
+            textSignature.addEventListener('input', (e) => {
+                signatureData.value = e.target.value;
+            });
+
+            // =============================================================================
+            // FORM SUBMISSION HANDLING
+            // =============================================================================
+            
+            /**
+             * Handles form submission with signature validation
+             */
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                // =============================================================================
+                // SIGNATURE VALIDATION
+                // =============================================================================
+                
+                const currentMethod = signatureMethod.value;
+                let hasSignature = false;
+                
+                if (currentMethod === 'drawn') {
+                    // Validate drawn signature
+                    hasSignature = window.signaturePad && !window.signaturePad.isEmpty();
+                    if (hasSignature) {
+                        try {
+                            // Store signature as base64 data URL
+                            signatureData.value = window.signaturePad.toDataURL();
+                        } catch (error) {
+                            console.error('Error getting signature data:', error);
+                            hasSignature = false;
+                        }
+                    }
+                } else {
+                    // Validate typed signature
+                    hasSignature = textSignature.value.trim() !== '';
+                    if (hasSignature) {
+                        // Store typed name as signature
+                        signatureData.value = textSignature.value.trim();
+                    }
+                }
+                
+                // Prevent submission if no signature provided
+                if (!hasSignature) {
+                    alert('Please provide your signature before submitting.');
+                    return;
+                }
+                
+                // =============================================================================
+                // FORM DATA COLLECTION AND SUBMISSION
+                // =============================================================================
+                
+                // Collect all form data
+                const formData = new FormData(form);
+                
+                // Log form data for debugging (remove in production)
+                console.log('Form Data:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(`${key}: ${value}`);
+                }
+                
+                // =============================================================================
+                // ACTUAL FORM SUBMISSION
+                // Replace this section with your server submission logic
+                // =============================================================================
+                
+                /*
+                // Example server submission:
+                fetch('/submit-agreement', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Agreement submitted successfully!');
+                    form.reset();
+                    window.signaturePad.clear();
+                    updateSignatureStatus();
+                })
+                .catch(error => {
+                    alert('Error submitting form. Please try again.');
+                    console.error('Error:', error);
+                });
+                */
+                
+                // Demo success message (replace with actual submission)
+                alert('Agreement submitted successfully!\n\nSignature method: ' + currentMethod + '\nCheck console for form data.');
+            });
+
+            // =============================================================================
+            // INITIAL STATUS UPDATE
+            // =============================================================================
+            
+            // Set initial signature status
+            updateSignatureStatus();
+        }
+
+        // =============================================================================
+        // INITIALIZATION TRIGGER
+        // =============================================================================
+        
+        /**
+         * Start the initialization process when DOM is ready
+         */
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeSignaturePad);
+        } else {
+            // DOM already loaded
+            initializeSignaturePad();
+        }
+    </script>
+</body>
+</html>
