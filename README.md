@@ -1,6 +1,6 @@
-# Touch Signature to SVG, PNG or JPG - Complete Form Integration
+# Signature Pad Integration Suite - Demo & Form Integration
 
-A comprehensive signature pad integration example that allows users to draw digital signatures and submit them through web forms. This example builds upon the [signature_pad library](https://github.com/szimek/signature_pad) to provide a complete form submission system with database storage and file management.
+A comprehensive signature pad integration project providing both a simple demo for testing and a complete business form integration. Choose the right implementation for your needs: simple signature testing or full CRM/business workflow integration.
 
 ![Signature Pad Integration](https://nikimolnar.uk/github/img/sigpad_og.jpg)
 
@@ -15,9 +15,34 @@ A comprehensive signature pad integration example that allows users to draw digi
 - **Security Features**: Input validation, SQL injection prevention, file validation
 - **Error Handling**: Comprehensive error logging and user feedback
 
+## 📂 Project Structure & Use Cases
+
+This project is organized into three main directories for different use cases:
+
+### `/demo/` - Signature Pad Testing & Development
+**Use this for**: Testing signature functionality, proof of concepts, integrating into existing applications
+
+- `signature-pad-demo.html` - Interactive canvas with drawing tools
+- `css/` and `js/` - Required assets for the demo
+- Features: Draw, clear, undo, color change, save as PNG/JPG/SVG files
+
+### `/form-integration/` - Complete Business Form
+**Use this for**: CRM integration, business workflows, standalone deployments
+
+- `business-form.html` - Complete form with signature integration (self-contained)
+- Includes: User details, signature options (draw/type), form validation
+- Ready for production deployment with minimal configuration
+
+### `/backend/` - PHP Server Processing
+**Use this for**: Processing form submissions, storing signatures and data
+
+- `submit-agreement.php` - Form processing script (PHP 8.1+ compatible)
+- `uploads/signatures/` - File storage directory
+- Handles: Database operations, file conversions, validation, logging
+
 ## 📋 Requirements
 
-- **PHP 7.4+** with PDO MySQL extension
+- **PHP 8.1+** with PDO MySQL extension (updated for modern PHP features)
 - **MySQL 5.7+** or **MariaDB 10.2+**
 - **Web server** (Apache, Nginx, or similar)
 - **Modern web browser** with HTML5 Canvas support
@@ -26,14 +51,20 @@ A comprehensive signature pad integration example that allows users to draw digi
 
 ### Step 1: Download Files
 
-Clone or download this repository and copy these files to your web directory. The example.html file includes all CSS and JS, so it does not require links to either - they are included if you wish to separate them out, as they are in the index.html file:
+Clone or download this repository to your web directory. The project structure is organized as follows:
 
 ```
 your-website/
-├── example.html (or rename to your preferred name, .e.g index.html which will be used from now on)
-├── submit-agreement.php
-├── uploads/ (you need to create this)
-└── signature_form_errors.log (auto-created)
+├── demo/
+│   ├── signature-pad-demo.html    # Simple signature testing
+│   ├── css/                       # Demo styling
+│   └── js/                        # Demo JavaScript
+├── form-integration/
+│   └── business-form.html          # Complete business form (self-contained)
+├── backend/
+│   ├── submit-agreement.php        # Form processing (PHP 8.1+)
+│   └── uploads/signatures/         # File storage (needs write permissions)
+└── README.md
 ```
 
 ### Step 2: Database Setup
@@ -84,7 +115,7 @@ CREATE TABLE form_submissions (
 
 #### 3.1 Edit Database Connection
 
-Open `submit-agreement.php` and update the database configuration (lines 25-30):
+Open `backend/submit-agreement.php` and update the database configuration (lines 25-30):
 
 ```php
 // Database Configuration
@@ -119,20 +150,20 @@ $log_submissions = true;          // Enable logging
 $debug_mode = false;              // Set true for development only
 ```
 
-### Step 4: Create Upload Directory
+### Step 4: Set Up File Permissions
 
-#### 4.1 Create Directory Structure
+#### 4.1 Create Directory Structure (if not using Git)
 
 ```bash
 # Navigate to your web directory
 cd /path/to/your/website
 
-# Create upload directories
-mkdir -p uploads/signatures
+# Create upload directories (if they don't exist)
+mkdir -p backend/uploads/signatures
 
 # Set proper permissions
-chmod 755 uploads
-chmod 755 uploads/signatures
+chmod 755 backend/uploads
+chmod 755 backend/uploads/signatures
 ```
 
 #### 4.2 Alternative: Create via PHP
@@ -141,7 +172,7 @@ If you can't use command line, create this PHP script temporarily:
 
 ```php
 <?php
-$upload_dir = 'uploads/signatures';
+$upload_dir = 'backend/uploads/signatures';
 if (!file_exists($upload_dir)) {
     if (mkdir($upload_dir, 0755, true)) {
         echo "Upload directory created successfully!";
@@ -154,18 +185,30 @@ if (!file_exists($upload_dir)) {
 ?>
 ```
 
-### Step 5: Update HTML Form
+### Step 5: Choose Your Implementation
 
-#### 5.1 Update Form Action
+#### 5.1 For Simple Testing (Demo)
+1. Open `demo/signature-pad-demo.html` in your browser
+2. Test signature drawing, colors, undo, clear functions
+3. Use save buttons to download signature files
+4. No backend configuration needed for demo
 
-In your HTML form, update the form submission URL in the JavaScript (around line 450):
+#### 5.2 For Business Form Integration
 
-```javascript
-fetch('/submit-agreement.php', {  // Update this path if needed
-    method: 'POST',
-    body: formData
-})
-```
+1. **Edit Form Submission Path**
+   In `form-integration/business-form.html`, uncomment and update the fetch URL (around line 596):
+
+   ```javascript
+   fetch('../backend/submit-agreement.php', {  // Path is already correct for new structure
+       method: 'POST',
+       body: formData
+   })
+   ```
+
+2. **Test the Form**
+   - Open `form-integration/business-form.html` in your browser
+   - Fill out all required fields
+   - Test both drawing and typing signature modes
 
 #### 5.2 Customize Form Fields (Optional)
 
@@ -184,10 +227,10 @@ Modify the form fields in the HTML to match your requirements:
 
 #### 6.1 Web Server Security (Apache)
 
-Create a `.htaccess` file in the uploads directory:
+Create a `.htaccess` file in the backend/uploads directory:
 
 ```apache
-# uploads/.htaccess
+# backend/uploads/.htaccess
 # Prevent direct access to uploaded files
 <Files "*">
     Order Deny,Allow
@@ -209,8 +252,8 @@ php_flag engine off
 Add to your Nginx configuration:
 
 ```nginx
-# Prevent access to uploads directory
-location /uploads/ {
+# Prevent access to uploads directory  
+location /backend/uploads/ {
     location ~* \.(png|jpg|jpeg|svg)$ {
         # Allow image files
     }
@@ -319,15 +362,27 @@ Your final directory structure should look like:
 
 ```
 your-website/
-├── index.html                     # Main form page
-├── submit-agreement.php           # Form processor
-├── uploads/
-│   ├── .htaccess                 # Security config
-│   └── signatures/               # Signature files
-│       ├── signature_1_20240101123456.png
-│       └── signature_1_20240101123456.svg
-├── signature_form_errors.log     # Error log (auto-created)
-└── signature_form_success.log    # Success log (auto-created)
+├── demo/                                    # Demo & Testing
+│   ├── signature-pad-demo.html            # Simple signature demo
+│   ├── css/
+│   │   ├── signature-pad.css
+│   │   └── bootstrap-custom.css
+│   └── js/
+│       ├── app.js
+│       └── signature_pad.umd.js
+├── form-integration/                        # Business Integration
+│   └── business-form.html                  # Complete form (self-contained)
+├── backend/                                 # Server Processing
+│   ├── submit-agreement.php                # Form processor (PHP 8.1+)
+│   ├── uploads/
+│   │   ├── .htaccess                      # Security config
+│   │   └── signatures/                     # Signature files
+│   │       ├── signature_1_20240101123456.png
+│   │       └── signature_1_20240101123456.svg
+│   ├── signature_form_errors.log          # Error log (auto-created)
+│   └── signature_form_success.log         # Success log (auto-created)
+├── CLAUDE.md                               # Development guidance
+└── README.md                              # This file
 ```
 
 ## 🗄️ Database Schema

@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 /**
  * Validates and sanitizes form input
  */
-function validateInput($data) {
+function validateInput(array $data): array {
     global $require_signature;
     
     $errors = [];
@@ -199,14 +199,14 @@ function validateInput($data) {
 /**
  * Processes and saves signature files from base64 data in multiple formats
  */
-function processSignatureFiles($base64_data, $user_id, $formats = ['png']) {
+function processSignatureFiles(string $base64_data, string $user_id, array $formats = ['png']): array {
     global $upload_path, $max_file_size, $allowed_formats;
     
     $saved_files = [];
     
     try {
         // Handle SVG format differently as it's XML-based
-        if (strpos($base64_data, 'data:image/svg+xml') === 0) {
+        if (str_starts_with($base64_data, 'data:image/svg+xml')) {
             return processSVGSignature($base64_data, $user_id);
         }
         
@@ -244,16 +244,14 @@ function processSignatureFiles($base64_data, $user_id, $formats = ['png']) {
             $success = false;
             
             // Save in requested format
-            switch ($format) {
-                case 'png':
+            match ($format) {
+                'png' => (function() use ($image_resource, $file_path, &$success) {
                     // Enable alpha blending for transparency
                     imagealphablending($image_resource, false);
                     imagesavealpha($image_resource, true);
                     $success = imagepng($image_resource, $file_path, 9); // Max compression
-                    break;
-                    
-                case 'jpg':
-                case 'jpeg':
+                })(),
+                'jpg', 'jpeg' => (function() use ($image_resource, $file_path, &$success) {
                     // Create white background for JPG (no transparency support)
                     $width = imagesx($image_resource);
                     $height = imagesy($image_resource);
@@ -263,8 +261,9 @@ function processSignatureFiles($base64_data, $user_id, $formats = ['png']) {
                     imagecopy($jpg_image, $image_resource, 0, 0, 0, 0, $width, $height);
                     $success = imagejpeg($jpg_image, $file_path, 90); // 90% quality
                     imagedestroy($jpg_image);
-                    break;
-            }
+                })(),
+                default => null
+            };
             
             if ($success) {
                 $saved_files[$format] = $filename;
@@ -300,7 +299,7 @@ function processSignatureFiles($base64_data, $user_id, $formats = ['png']) {
 /**
  * Processes SVG signature data
  */
-function processSVGSignature($base64_data, $user_id) {
+function processSVGSignature(string $base64_data, string $user_id): array {
     global $upload_path, $max_file_size;
     
     try {
@@ -317,7 +316,7 @@ function processSVGSignature($base64_data, $user_id) {
         }
         
         // Basic SVG validation
-        if (strpos($svg_data, '<svg') === false || strpos($svg_data, '</svg>') === false) {
+        if (!str_contains($svg_data, '<svg') || !str_contains($svg_data, '</svg>')) {
             throw new Exception("Invalid SVG content");
         }
         
@@ -506,7 +505,7 @@ try {
 /**
  * Retrieves a form submission by ID
  */
-function getSubmission($id) {
+function getSubmission(int $id): array|false {
     global $pdo;
     
     $sql = "SELECT * FROM form_submissions WHERE id = ?";
@@ -519,7 +518,7 @@ function getSubmission($id) {
 /**
  * Retrieves signature file paths for all formats
  */
-function getSignatureFilePaths($submission_id) {
+function getSignatureFilePaths(int $submission_id): ?array {
     global $pdo, $upload_path;
     
     $sql = "SELECT signature_file_png, signature_file_jpg, signature_file_svg FROM form_submissions WHERE id = ?";
@@ -543,7 +542,7 @@ function getSignatureFilePaths($submission_id) {
 /**
  * Deletes all signature files for a submission
  */
-function deleteSignatureFiles($submission_id) {
+function deleteSignatureFiles(int $submission_id): int {
     global $pdo, $upload_path;
     
     $sql = "SELECT signature_file_png, signature_file_jpg, signature_file_svg FROM form_submissions WHERE id = ?";
@@ -551,7 +550,7 @@ function deleteSignatureFiles($submission_id) {
     $stmt->execute([$submission_id]);
     $result = $stmt->fetch();
     
-    if (!$result) return false;
+    if (!$result) return 0;
     
     $deleted_count = 0;
     foreach (['png', 'jpg', 'svg'] as $format) {
@@ -569,7 +568,7 @@ function deleteSignatureFiles($submission_id) {
 /**
  * Gets all submissions (with pagination)
  */
-function getSubmissions($page = 1, $per_page = 50) {
+function getSubmissions(int $page = 1, int $per_page = 50): array {
     global $pdo;
     
     $offset = ($page - 1) * $per_page;

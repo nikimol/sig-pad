@@ -1,6 +1,6 @@
 var wrapper = document.getElementById("signature-pad");
 var clearButton = wrapper.querySelector("[data-action=clear]");
-var changeColorButton = wrapper.querySelector("[data-action=change-color]");
+var colorOptions = wrapper.querySelectorAll(".color-option");
 var undoButton = wrapper.querySelector("[data-action=undo]");
 var savePNGButton = wrapper.querySelector("[data-action=save-png]");
 var saveJPGButton = wrapper.querySelector("[data-action=save-jpg]");
@@ -88,13 +88,21 @@ undoButton.addEventListener("click", function (event) {
   }
 });
 
-changeColorButton.addEventListener("click", function (event) {
-  var r = Math.round(Math.random() * 255);
-  var g = Math.round(Math.random() * 255);
-  var b = Math.round(Math.random() * 255);
-  var color = "rgb(" + r + "," + g + "," + b +")";
-
-  signaturePad.penColor = color;
+// Color picker functionality
+colorOptions.forEach(function(option) {
+  option.addEventListener("click", function(event) {
+    // Remove active class from all options
+    colorOptions.forEach(function(opt) {
+      opt.classList.remove("active");
+    });
+    
+    // Add active class to clicked option
+    event.target.classList.add("active");
+    
+    // Set signature pad color
+    var selectedColor = event.target.getAttribute("data-color");
+    signaturePad.penColor = selectedColor;
+  });
 });
 
 savePNGButton.addEventListener("click", function (event) {

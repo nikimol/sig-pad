@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Form with Signature Pad Integration</title>
+    <title>Business Form with Signature Integration</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
     
     <!-- External CSS Dependencies -->
@@ -125,14 +125,80 @@
         .text-success { color: #28a745 !important; }
         .text-warning { color: #ffc107 !important; }
         
+        /* Color picker styling */
+        .color-picker-container {
+            display: inline-flex;
+            align-items: center;
+            margin: 0 10px;
+        }
+
+        .color-picker-label {
+            font-size: 12px;
+            margin-right: 8px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 4px;
+            padding: 2px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .color-option {
+            width: 24px;
+            height: 24px;
+            border-radius: 3px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .color-option.active {
+            border-color: #007bff;
+            transform: scale(1.1);
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+        }
+
+        .color-option.active::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
+        }
+
         /* Mobile responsiveness */
         @media (max-width: 768px) {
             .signature-controls {
                 flex-direction: column;
+                gap: 10px;
             }
             
             .signature-controls .btn-group {
                 justify-content: center;
+            }
+            
+            .color-picker-container {
+                margin: 5px 0;
+                justify-content: center;
+            }
+            
+            .color-picker-label {
+                margin-right: 5px;
             }
         }
     </style>
@@ -200,7 +266,18 @@
                         <div class="btn-group">
                             <button type="button" class="btn btn-danger btn-sm" id="clearBtn">Clear</button>
                             <button type="button" class="btn btn-warning btn-sm" id="undoBtn">Undo</button>
-                            <button type="button" class="btn btn-info btn-sm" id="changeColorBtn">Change Color</button>
+                        </div>
+                        <div class="color-picker-container">
+                            <span class="color-picker-label">Color:</span>
+                            <div class="color-picker">
+                                <div class="color-option active" data-color="rgb(0, 0, 0)" style="background-color: rgb(0, 0, 0)" title="Black"></div>
+                                <div class="color-option" data-color="rgb(0, 0, 255)" style="background-color: rgb(0, 0, 255)" title="Blue"></div>
+                                <div class="color-option" data-color="rgb(255, 0, 0)" style="background-color: rgb(255, 0, 0)" title="Red"></div>
+                                <div class="color-option" data-color="rgb(0, 128, 0)" style="background-color: rgb(0, 128, 0)" title="Green"></div>
+                                <div class="color-option" data-color="rgb(128, 0, 128)" style="background-color: rgb(128, 0, 128)" title="Purple"></div>
+                                <div class="color-option" data-color="rgb(255, 140, 0)" style="background-color: rgb(255, 140, 0)" title="Orange"></div>
+                                <div class="color-option" data-color="rgb(139, 69, 19)" style="background-color: rgb(139, 69, 19)" title="Brown"></div>
+                            </div>
                         </div>
                     </div>
                     
@@ -376,7 +453,7 @@
             // Get references to all interactive elements
             const clearBtn = document.getElementById('clearBtn');
             const undoBtn = document.getElementById('undoBtn');
-            const changeColorBtn = document.getElementById('changeColorBtn');
+            const colorOptions = document.querySelectorAll('.color-option');
             const signatureStatus = document.getElementById('signatureStatus');
             const signatureData = document.getElementById('signatureData');
             const signatureMethod = document.getElementById('signatureMethod');
@@ -420,23 +497,26 @@
             });
 
             /**
-             * Change Color Button - randomly changes pen color
+             * Color Picker - allows users to select from predefined colors
              */
-            changeColorBtn.addEventListener('click', () => {
-                try {
-                    const colors = ['rgb(0, 0, 0)', 'rgb(0, 0, 255)', 'rgb(255, 0, 0)', 'rgb(0, 128, 0)', 'rgb(128, 0, 128)'];
-                    const currentColor = window.signaturePad.penColor;
-                    let newColor;
-                    
-                    // Pick a different color than the current one
-                    do {
-                        newColor = colors[Math.floor(Math.random() * colors.length)];
-                    } while (newColor === currentColor);
-                    
-                    window.signaturePad.penColor = newColor;
-                } catch (error) {
-                    console.error('Error changing color:', error);
-                }
+            colorOptions.forEach(option => {
+                option.addEventListener('click', (event) => {
+                    try {
+                        // Remove active class from all options
+                        colorOptions.forEach(opt => {
+                            opt.classList.remove('active');
+                        });
+                        
+                        // Add active class to clicked option
+                        event.target.classList.add('active');
+                        
+                        // Set signature pad color
+                        const selectedColor = event.target.getAttribute('data-color');
+                        window.signaturePad.penColor = selectedColor;
+                    } catch (error) {
+                        console.error('Error changing color:', error);
+                    }
+                });
             });
 
             // =============================================================================
@@ -593,19 +673,26 @@
                 
                 /*
                 // Example server submission:
-                fetch('/submit-agreement', {
+                fetch('../backend/submit-agreement.php', {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
-                    alert('Agreement submitted successfully!');
-                    form.reset();
-                    window.signaturePad.clear();
-                    updateSignatureStatus();
+                    if (data.success) {
+                        alert('Agreement submitted successfully!');
+                        form.reset();
+                        if (window.signaturePad) window.signaturePad.clear();
+                        updateSignatureStatus();
+                    } else {
+                        alert('Error: ' + data.message);
+                        if (data.data && data.data.errors) {
+                            console.log('Validation errors:', data.data.errors);
+                        }
+                    }
                 })
                 .catch(error => {
-                    alert('Error submitting form. Please try again.');
+                    alert('Network error. Please try again.');
                     console.error('Error:', error);
                 });
                 */
