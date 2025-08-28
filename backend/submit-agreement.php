@@ -32,7 +32,7 @@ $db_charset = 'utf8mb4';          // Database charset
 // File Upload Configuration
 $upload_path = 'uploads/signatures/';  // Path to store signature files (relative to this script)
 $max_file_size = 5 * 1024 * 1024;     // Maximum file size (5MB)
-$allowed_formats = ['png', 'jpg', 'jpeg', 'svg']; // Allowed signature formats
+$allowed_formats = ['png', 'webp', 'svg']; // Allowed signature formats (optimal for signatures)
 $default_format = 'png';               // Default format for form submissions
 $save_multiple_formats = false;        // Set to true to save signature in all formats
 
@@ -107,7 +107,7 @@ try {
         signature_method ENUM('drawn', 'typed') NOT NULL,
         signature_data TEXT,
         signature_file_png VARCHAR(255),
-        signature_file_jpg VARCHAR(255),
+        signature_file_webp VARCHAR(255),
         signature_file_svg VARCHAR(255),
         agree_terms BOOLEAN NOT NULL DEFAULT 0,
         ip_address VARCHAR(45),
@@ -176,7 +176,7 @@ function validateInput(array $data): array {
             $errors[] = "Signature is required.";
         } elseif ($signature_method === 'drawn') {
             // Validate base64 image data
-            if (!preg_match('/^data:image\/(png|jpeg|jpg);base64,/', $signature_data)) {
+            if (!preg_match('/^data:image\/(png|webp);base64,/', $signature_data)) {
                 $errors[] = "Invalid signature image format.";
             }
         } elseif ($signature_method === 'typed') {
@@ -210,7 +210,7 @@ function processSignatureFiles(string $base64_data, string $user_id, array $form
             return processSVGSignature($base64_data, $user_id);
         }
         
-        // Extract image data and format for PNG/JPG
+        // Extract image data and format for PNG/WebP
         if (!preg_match('/^data:image\/(\w+);base64,(.+)$/', $base64_data, $matches)) {
             throw new Exception("Invalid base64 image format");
         }
@@ -251,16 +251,11 @@ function processSignatureFiles(string $base64_data, string $user_id, array $form
                     imagesavealpha($image_resource, true);
                     $success = imagepng($image_resource, $file_path, 9); // Max compression
                 })(),
-                'jpg', 'jpeg' => (function() use ($image_resource, $file_path, &$success) {
-                    // Create white background for JPG (no transparency support)
-                    $width = imagesx($image_resource);
-                    $height = imagesy($image_resource);
-                    $jpg_image = imagecreatetruecolor($width, $height);
-                    $white = imagecolorallocate($jpg_image, 255, 255, 255);
-                    imagefill($jpg_image, 0, 0, $white);
-                    imagecopy($jpg_image, $image_resource, 0, 0, 0, 0, $width, $height);
-                    $success = imagejpeg($jpg_image, $file_path, 90); // 90% quality
-                    imagedestroy($jpg_image);
+                'webp' => (function() use ($image_resource, $file_path, &$success) {
+                    // WebP with transparency support
+                    imagealphablending($image_resource, false);
+                    imagesavealpha($image_resource, true);
+                    $success = imagewebp($image_resource, $file_path, 90); // 90% quality
                 })(),
                 default => null
             };
@@ -373,8 +368,8 @@ try {
         $formats_to_save = [$default_format]; // Always save default format
         
         if ($save_multiple_formats) {
-            // Save in all supported formats (PNG, JPG, SVG)
-            $formats_to_save = ['png', 'jpg', 'svg'];
+            // Save in all supported formats (PNG, WebP, SVG)
+            $formats_to_save = ['png', 'webp', 'svg'];
         }
         
         // Check if specific format was requested via POST
@@ -396,7 +391,7 @@ try {
         signature_method, 
         signature_data, 
         signature_file_png,
-        signature_file_jpg,
+        signature_file_webp,
         signature_file_svg,
         agree_terms, 
         ip_address, 
@@ -411,7 +406,7 @@ try {
         $signature_method,
         ($signature_method === 'typed') ? $signature_data : null, // Only store text signatures in database
         $signature_files['png'] ?? null,
-        $signature_files['jpg'] ?? null,
+        $signature_files['webp'] ?? null,
         $signature_files['svg'] ?? null,
         $agree_terms,
         $ip_address,
@@ -446,9 +441,9 @@ try {
             $update_fields[] = "signature_file_png = ?";
             $update_values[] = $updated_files['png'];
         }
-        if (isset($updated_files['jpg'])) {
-            $update_fields[] = "signature_file_jpg = ?";
-            $update_values[] = $updated_files['jpg'];
+        if (isset($updated_files['webp'])) {
+            $update_fields[] = "signature_file_webp = ?";
+            $update_values[] = $updated_files['webp'];
         }
         if (isset($updated_files['svg'])) {
             $update_fields[] = "signature_file_svg = ?";
@@ -521,7 +516,7 @@ function getSubmission(int $id): array|false {
 function getSignatureFilePaths(int $submission_id): ?array {
     global $pdo, $upload_path;
     
-    $sql = "SELECT signature_file_png, signature_file_jpg, signature_file_svg FROM form_submissions WHERE id = ?";
+    $sql = "SELECT signature_file_png, signature_file_webp, signature_file_svg FROM form_submissions WHERE id = ?";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$submission_id]);
     $result = $stmt->fetch();
@@ -529,7 +524,7 @@ function getSignatureFilePaths(int $submission_id): ?array {
     if (!$result) return null;
     
     $paths = [];
-    foreach (['png', 'jpg', 'svg'] as $format) {
+    foreach (['png', 'webp', 'svg'] as $format) {
         $filename = $result["signature_file_{$format}"];
         if ($filename && file_exists($upload_path . $filename)) {
             $paths[$format] = $upload_path . $filename;
@@ -545,7 +540,7 @@ function getSignatureFilePaths(int $submission_id): ?array {
 function deleteSignatureFiles(int $submission_id): int {
     global $pdo, $upload_path;
     
-    $sql = "SELECT signature_file_png, signature_file_jpg, signature_file_svg FROM form_submissions WHERE id = ?";
+    $sql = "SELECT signature_file_png, signature_file_webp, signature_file_svg FROM form_submissions WHERE id = ?";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$submission_id]);
     $result = $stmt->fetch();
@@ -553,7 +548,7 @@ function deleteSignatureFiles(int $submission_id): int {
     if (!$result) return 0;
     
     $deleted_count = 0;
-    foreach (['png', 'jpg', 'svg'] as $format) {
+    foreach (['png', 'webp', 'svg'] as $format) {
         $filename = $result["signature_file_{$format}"];
         if ($filename && file_exists($upload_path . $filename)) {
             if (unlink($upload_path . $filename)) {
@@ -574,7 +569,7 @@ function getSubmissions(int $page = 1, int $per_page = 50): array {
     $offset = ($page - 1) * $per_page;
     
     $sql = "SELECT id, full_name, email, company, signature_method, 
-                   signature_file_png, signature_file_jpg, signature_file_svg, submitted_at 
+                   signature_file_png, signature_file_webp, signature_file_svg, submitted_at 
             FROM form_submissions 
             ORDER BY submitted_at DESC 
             LIMIT ? OFFSET ?";

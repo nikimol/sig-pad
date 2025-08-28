@@ -3,12 +3,11 @@ var clearButton = wrapper.querySelector("[data-action=clear]");
 var colorOptions = wrapper.querySelectorAll(".color-option");
 var undoButton = wrapper.querySelector("[data-action=undo]");
 var savePNGButton = wrapper.querySelector("[data-action=save-png]");
-var saveJPGButton = wrapper.querySelector("[data-action=save-jpg]");
+var saveWebPButton = wrapper.querySelector("[data-action=save-webp]");
 var saveSVGButton = wrapper.querySelector("[data-action=save-svg]");
 var canvas = wrapper.querySelector("canvas");
 var signaturePad = new SignaturePad(canvas, {
-  // It's Necessary to use an opaque color when saving image as JPEG;
-  // this option can be omitted if only saving as PNG or SVG
+  // White background ensures compatibility with WebP format
   backgroundColor: 'rgb(255, 255, 255)'
 });
 
@@ -114,12 +113,12 @@ savePNGButton.addEventListener("click", function (event) {
   }
 });
 
-saveJPGButton.addEventListener("click", function (event) {
+saveWebPButton.addEventListener("click", function (event) {
   if (signaturePad.isEmpty()) {
     alert("Please provide a signature first.");
   } else {
-    var dataURL = signaturePad.toDataURL("image/jpeg");
-    download(dataURL, "signature.jpg");
+    var dataURL = signaturePad.toDataURL("image/webp");
+    download(dataURL, "signature.webp");
   }
 });
 

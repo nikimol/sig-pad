@@ -134,7 +134,7 @@ Update the file upload configuration (lines 32-37):
 // File Upload Configuration
 $upload_path = 'uploads/signatures/';      // Relative path from PHP script
 $max_file_size = 5 * 1024 * 1024;         // 5MB max file size
-$allowed_formats = ['png', 'jpg', 'jpeg', 'svg'];  // Allowed formats
+$allowed_formats = ['png', 'webp', 'svg']; // Optimal formats for signatures
 $default_format = 'png';                   // Default format for form submissions
 $save_multiple_formats = false;            // Set true to save all formats
 ```
@@ -189,8 +189,8 @@ if (!file_exists($upload_dir)) {
 
 #### 5.1 For Simple Testing (Demo)
 1. Open `demo/signature-pad-demo.html` in your browser
-2. Test signature drawing, colors, undo, clear functions
-3. Use save buttons to download signature files
+2. Test signature drawing, color picker, undo, clear functions
+3. Use save buttons to download PNG, WebP, or SVG files
 4. No backend configuration needed for demo
 
 #### 5.2 For Business Form Integration
@@ -237,8 +237,8 @@ Create a `.htaccess` file in the backend/uploads directory:
     Deny from all
 </Files>
 
-# Allow only image files to be accessed
-<FilesMatch "\.(png|jpg|jpeg|svg)$">
+# Allow only signature image files to be accessed
+<FilesMatch "\.(png|webp|svg)$">
     Order Allow,Deny
     Allow from all
 </FilesMatch>
@@ -254,8 +254,8 @@ Add to your Nginx configuration:
 ```nginx
 # Prevent access to uploads directory  
 location /backend/uploads/ {
-    location ~* \.(png|jpg|jpeg|svg)$ {
-        # Allow image files
+    location ~* \.(png|webp|svg)$ {
+        # Allow signature image files
     }
     location ~* \.(php|php5|phtml)$ {
         deny all;
@@ -342,7 +342,7 @@ Enable multiple format saving:
 
 ```php
 // In submit-agreement.php
-$save_multiple_formats = true;  // Saves PNG, JPG, and SVG
+$save_multiple_formats = true;  // Saves PNG, WebP, and SVG
 ```
 
 ### Form Validation
@@ -378,6 +378,7 @@ your-website/
 │   │   ├── .htaccess                      # Security config
 │   │   └── signatures/                     # Signature files
 │   │       ├── signature_1_20240101123456.png
+│   │       ├── signature_1_20240101123456.webp
 │   │       └── signature_1_20240101123456.svg
 │   ├── signature_form_errors.log          # Error log (auto-created)
 │   └── signature_form_success.log         # Success log (auto-created)
@@ -398,7 +399,7 @@ The form submissions table structure:
 | `signature_method` | ENUM | 'drawn' or 'typed' |
 | `signature_data` | TEXT | Text signature data |
 | `signature_file_png` | VARCHAR(255) | PNG filename |
-| `signature_file_jpg` | VARCHAR(255) | JPG filename |
+| `signature_file_webp` | VARCHAR(255) | WebP filename |
 | `signature_file_svg` | VARCHAR(255) | SVG filename |
 | `agree_terms` | BOOLEAN | Terms agreement status |
 | `ip_address` | VARCHAR(45) | User's IP address |
@@ -409,7 +410,7 @@ The form submissions table structure:
 
 ### File Upload Security
 
-- **File type validation**: Only allows PNG, JPG, SVG formats
+- **File type validation**: Only allows PNG, WebP, SVG formats (optimal for signatures)
 - **File size limits**: Configurable maximum file size
 - **Unique filenames**: Prevents file conflicts and overwrites
 - **Directory protection**: Prevents direct file access
